@@ -1,0 +1,56 @@
+name: update-data
+
+on:
+  schedule:
+    - cron: "47 7 * * 1-5"    # 16:47 KST — KRX 마감 후
+    - cron: "47 21 * * 1-5"   # 06:47 KST 다음날 아침 — 미국 마감 후 (EDT 20:00 UTC / EST 21:00 UTC 마감 모두 커버)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update data
+        run: python scripts/update_data.py
+
+      - name: Commit and push data
+        run: |
+          # git diff는 첫 실행의 untracked CSV를 놓치므로 status --porcelain 사용
+          if [ -z "$(git status --porcelain -- data/)" ]; then
+            echo "No data changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git commit -m "data: 30m bars ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          # push 직전에 사람이 main에 push하는 경합이 있어도 데이터 커밋을
+          # 잃지 않도록 rebase 후 재시도
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt ${attempt}), retrying..."
+            sleep 5
+          done
+          echo "giving up after 3 push attempts"
+          exit 1

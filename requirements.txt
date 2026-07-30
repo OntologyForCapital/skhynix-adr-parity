@@ -1,0 +1,6 @@
+# yfinance는 비공식 API라 버전 업데이트로 파손될 수 있어 정확 버전 고정.
+yfinance==1.5.2
+streamlit>=1.35
+pandas>=2.0
+altair>=5.0
+pytest>=8.0

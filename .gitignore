@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+.claude/
+.streamlit/
+*.log
+nohup.out
+*.csv.tmp
+# data/ 는 영구 저장소이므로 절대 ignore하지 않는다
